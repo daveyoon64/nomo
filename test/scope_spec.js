@@ -1,6 +1,7 @@
 'use strict';
 
 var Scope = require('../src/scope');
+var _ = require('lodash');
 
 describe('Scope', function() {
   it('can be constructed and used as an object', function() {
@@ -127,6 +128,74 @@ describe('Scope', function() {
       scope.name = "Nomo";
       scope.$digest();
       expect(scope.initial).toBe('N.');
+    });
+
+    it ('gives up on the watches after 10 iterations', function() {
+      // $digest can be put into an unstable state when watchers always change
+      // in this case the watchers constantly update a counter and digest never
+      // stops detecting a change. We want to set the max repetitions to 10
+      scope.counterA = 0;
+      scope.counterB = 0;
+  
+      scope.$watch(
+        function(scope) { return scope.counterA; }, 
+        function(newValue, oldValue, scope) {
+          scope.counterB++;
+        }
+      );
+  
+      scope.$watch(
+        function(scope) { return scope.counterB; }, 
+        function(newValue, oldValue, scope) {
+          scope.counterA++;
+        }
+      );
+      expect((function() { scope.$digest(); })).toThrow();
+    });
+
+    it ('ends the digest when the last watch is clean', function() {
+      // because running all watchers with $digest can be very expensive
+      // we need to prevent it from running more time than it has to.
+      // this can be accomplished by storing the last dirty watcher in 
+      // scope.
+      scope.array = _.range(100);
+      var watchExecutions = 0;
+
+      _.times(100, function(i) {
+        scope.$watch(
+          function(scope) {
+            watchExecutions++;
+            return scope.array[i];
+          },
+          function(newValue, oldValue, scope) {}
+        );
+      });
+
+      scope.$digest();
+      expect(watchExecutions).toBe(200);
+
+      scope.array[0] = 420;
+      scope.$digest();
+      expect(watchExecutions).toBe(301);
+    });
+
+    it ('does not end digest so that new watches are not run', function() {
+      scope.aValue = 'abc';
+      scope.counter = 0;
+  
+      scope.$watch(
+        function(scope) { return scope.aValue; },
+        function(newValue, oldValue, scope) {
+          scope.$watch(
+            function(scope) { return scope.aValue; },
+            function(newValue, oldValue, scope) {
+              scope.counter++;
+            }
+          );
+        }
+      );
+      scope.$digest();
+      expect(scope.counter).toBe(1);
     });
   });
 });
