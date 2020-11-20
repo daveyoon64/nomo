@@ -180,6 +180,8 @@ describe('Scope', function() {
     });
 
     it ('does not end digest so that new watches are not run', function() {
+      // edge case: when the listener function registers a new watcher, the new
+      // watcher never runs because the $$lastDirtyWatch 
       scope.aValue = 'abc';
       scope.counter = 0;
   
@@ -196,6 +198,28 @@ describe('Scope', function() {
       );
       scope.$digest();
       expect(scope.counter).toBe(1);
+    });
+
+    it ('compares based on value if enabled', function() {
+      // check the contents of an array or object, sent as a third arg when setting
+      // up a watcher
+      scope.aValue = [1, 2, 3];
+      scope.counter = 0;
+  
+      scope.$watch(
+        function(scope) { return scope.aValue; },
+        function(newValue, oldValue, scope) {
+          scope.counter++;
+        },
+        true
+      );
+
+      scope.$digest();
+      expect(scope.counter).toBe(1);
+
+      scope.aValue.push(4);
+      scope.$digest();
+      expect(scope.counter).toBe(2);
     });
   });
 });
