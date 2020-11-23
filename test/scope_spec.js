@@ -321,7 +321,6 @@ describe('Scope', function() {
 
       var destroyWatch = scope.$watch(
         function(scope) {
-          scope.name = 'second';
           watchCalls.push('second');
           destroyWatch();
         }
@@ -329,7 +328,6 @@ describe('Scope', function() {
 
       scope.$watch(
         function(scope) {
-          scope.name = 'third';
           watchCalls.push('third');
           return scope.aValue;
         }
