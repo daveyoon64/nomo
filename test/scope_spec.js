@@ -1,14 +1,14 @@
-'use strict';
+'use strict'
 
 var Scope = require('../src/scope');
 var _ = require('lodash');
 
 describe('Scope', function() {
   it('can be constructed and used as an object', function() {
-    var testScope = new Scope();
-    testScope.value = 'bubbles';
+    var test = new Scope();
+    test.testVar = 'haggar';
 
-    expect(testScope.value).toBe('bubbles');
+    expect(test.testVar).toBe('haggar');
   });
 
   describe('digest', function() {
@@ -18,8 +18,8 @@ describe('Scope', function() {
       scope = new Scope();
     });
 
-    it('calls the listener function of a watch on first $digest', function() {
-      var watchFn = function() { return 'whatever'; };
+    it('should call listener function on a watch\'s first $digest', function() {
+      var watchFn = function() { return 'watta'; };
       var listenerFn = jasmine.createSpy();
 
       scope.$watch(watchFn, listenerFn);
@@ -28,24 +28,26 @@ describe('Scope', function() {
       expect(listenerFn).toHaveBeenCalled();
     });
 
-    it('calls the watch function with the scope as the argument', function() {
-      // we care about data on 'scope' changing, so $digest should send scope as an arg
-      // for future access
+    it('should send scope as the watcher\'s first argument', function() {
+      // it calls the watch function with the scope as the argument
       var watchFn = jasmine.createSpy();
-      var listenerFn = function() {} ;
-      scope.$watch(watchFn, listenerFn);
+      var listenerFn = function() {};
 
+      scope.$watch(watchFn, listenerFn);
       scope.$digest();
 
       expect(watchFn).toHaveBeenCalledWith(scope);
     });
 
-    it('calls the listener function when the watched value changes', function() {
-      scope.testProp = 'piglet';
+    it('should call the listener function when the watched value changes', function() {
+      // REDO
+      scope.test = 'pokey';
       scope.counter = 0;
-      var watchFn = function(scope) { return scope.testProp; };
-      var listenerFn = function(newValue, oldValue, scope) { scope.counter++; };
-      scope.$watch(watchFn, listenerFn);
+
+      scope.$watch(
+        function(scope) { return scope.test; },
+        function() { scope.counter++; }
+      )
 
       expect(scope.counter).toBe(0);
       scope.$digest();
@@ -53,57 +55,49 @@ describe('Scope', function() {
       scope.$digest();
       expect(scope.counter).toBe(1);
 
-      scope.testProp = 'mcbeal';
+      scope.test = 'lafarge';
       expect(scope.counter).toBe(1);
-
       scope.$digest();
       expect(scope.counter).toBe(2);
     });
 
-    it('calls listener when watch value is first undefined', function() {
-      // covers case where the first change in the watched function is undefined
-      // we still need the listener to run, therefore, we need to init watcher.last
-      // to something unique. In this case, a function reference
-      scope.counter = 0;
-
+    it('should call listener, even if the first value is undefined', function() {
+      var listenerFn = jasmine.createSpy();
       scope.$watch(
-        function(scope) { return scope.someValue; },
-        function(newValue, oldValue, scope) { scope.counter++; }
+        function(scope) { return scope.nonExistant; },
+        listenerFn
       );
-
       scope.$digest();
-      expect(scope.counter).toBe(1);
+      expect(listenerFn).toHaveBeenCalled();
     });
 
     it('calls listener with new value as old value the first time', function() {
-      // however, we don't want to show a function reference. it's confusing.
-      // instead when watcher invokes listenerFn, we'll set oldValue to the 
-      // change from watcher.watchFn
-      scope.testValue = 'starfighter';
-      var oldValueGiven;
+      // REDO
+      scope.test = 'trampled';
+      var testReturn;
 
-      scope.$watch(
-        function(scope) { return scope.testValue; },
-        function(newValue, oldValue, scope) { oldValueGiven = oldValue;}
-      );
-
+      var watchFn = function(scope) { return scope.test; };
+      var listenerFn = function(newValue, oldValue, scope) {
+        testReturn = oldValue;
+      }
+      scope.$watch(watchFn, listenerFn);
       scope.$digest();
-      expect(oldValueGiven).toBe('starfighter');
+      expect(testReturn).toBe(scope.test);
     });
 
-    it('may have watchers that omit the listener function', function() {
-      // when you want to know when scope is digested & don't need listener
-      var watchFn = jasmine.createSpy().and.returnValue('something');
+    it('may have watchers without a listener function', function() {
+      // used to keep track of $digest with no side effects
+      var watchFn = jasmine.createSpy();
+
       scope.$watch(watchFn);
       scope.$digest();
-
       expect(watchFn).toHaveBeenCalled();
     });
 
     it('triggers chained watchers in the same digest', function() {
-      // run digest continually until there no are changes.
-      // order of changes should not matter
-      scope.name = "Hideo";
+      // REDO
+      // the $digest should continually run until there no dirty watchers
+      scope.name = 'Raleigh';
 
       scope.$watch(
         function(scope) { return scope.nameUpper; },
@@ -113,6 +107,7 @@ describe('Scope', function() {
           }
         }
       );
+
       scope.$watch(
         function(scope) { return scope.name; },
         function(newValue, oldValue, scope) {
@@ -123,41 +118,43 @@ describe('Scope', function() {
       );
 
       scope.$digest();
-      expect(scope.initial).toBe('H.');
-
-      scope.name = "Nomo";
+      expect(scope.initial).toBe('R.');
+      scope.name = 'kentucky';
       scope.$digest();
-      expect(scope.initial).toBe('N.');
+      expect(scope.initial).toBe('K.');
     });
 
-    it ('gives up on the watches after 10 iterations', function() {
-      // $digest can be put into an unstable state when watchers always change
-      // in this case the watchers constantly update a counter and digest never
-      // stops detecting a change. We want to set the max repetitions to 10
+    it('should stop trying to update watchers after 10 times', function() {
+      // REDO
+      // we have to catch the case where watchers constantly update each other
+      // which keeps $digest stuck in a dirty state
       scope.counterA = 0;
       scope.counterB = 0;
-  
+
       scope.$watch(
-        function(scope) { return scope.counterA; }, 
+        function(scope) { return scope.testValue; },
         function(newValue, oldValue, scope) {
           scope.counterB++;
         }
       );
-  
+
       scope.$watch(
-        function(scope) { return scope.counterB; }, 
+        function(scope) { return scope.testValue; },
         function(newValue, oldValue, scope) {
           scope.counterA++;
         }
       );
-      expect((function() { scope.$digest(); })).toThrow();
+
+      expect((function(scope) { scope.$digest(); })).toThrow();
     });
 
-    it ('ends the digest when the last watch is clean', function() {
-      // because running all watchers with $digest can be very expensive
-      // we need to prevent it from running more time than it has to.
-      // this can be accomplished by storing the last dirty watcher in 
-      // scope.
+    it('should end the digest when the last watcher is clean', function() {
+      // REDO
+      // because running all watchers with $digest is expensive, we need
+      // to prevent it from running more time than it has to. this can
+      // be accomplished by storing the last dirty watcher in scope.
+
+      // Debugger: why does line 45 need to exist for this to pass?
       scope.array = _.range(100);
       var watchExecutions = 0;
 
@@ -174,22 +171,23 @@ describe('Scope', function() {
       scope.$digest();
       expect(watchExecutions).toBe(200);
 
-      scope.array[0] = 420;
+      scope.array[0] = 1776;
       scope.$digest();
       expect(watchExecutions).toBe(301);
     });
 
-    it ('does not end digest so that new watches are not run', function() {
-      // edge case: when the listener function registers a new watcher, the new
-      // watcher never runs because the $$lastDirtyWatch 
-      scope.aValue = 'abc';
+    it('does not end $digest, so that new watchers are not run', function() {
+      // REDO
+      // edge case: when the listener registers a new watcher, this can 
+      // stop $digest from picking up the new watcher
+      scope.testValue = 'funk';
       scope.counter = 0;
-  
+
       scope.$watch(
-        function(scope) { return scope.aValue; },
+        function(scope) { return scope.testValue; },
         function(newValue, oldValue, scope) {
           scope.$watch(
-            function(scope) { return scope.aValue; },
+            function(scope) { return scope.testValue; },
             function(newValue, oldValue, scope) {
               scope.counter++;
             }
@@ -200,14 +198,16 @@ describe('Scope', function() {
       expect(scope.counter).toBe(1);
     });
 
-    it ('compares based on value if enabled', function() {
-      // check the contents of an array or object, sent as a third arg when setting
-      // up a watcher
-      scope.aValue = [1, 2, 3];
+    it('compares based on value if enabled', function() {
+      // REDO
+      // if the value we're watching is an object or array, we want
+      // to see if its contents were updated. '===' only tests 
+      // reference, which won't pass this test case
+      scope.array = ['iron'];
       scope.counter = 0;
-  
+
       scope.$watch(
-        function(scope) { return scope.aValue; },
+        function(scope) { return scope.array; },
         function(newValue, oldValue, scope) {
           scope.counter++;
         },
@@ -216,79 +216,84 @@ describe('Scope', function() {
 
       scope.$digest();
       expect(scope.counter).toBe(1);
-
-      scope.aValue.push(4);
+      scope.array.push('man');
       scope.$digest();
       expect(scope.counter).toBe(2);
     });
 
-    it('it correctly handles NaNs', function() {
-      // NaN is never equal to itself, so you have to catch this
-      scope.number = 0/0;
+    it('correctly handles NaNs', function() {
+      // REDO
+      // NaN can never equal itself, therefore, it'll will always be
+      // dirty when running $digest. We need to handle this.
+      // Why would I have to check if the value is number?
+      // check isNaN makes sense... hmmm
+      scope.test = 0/0;
       scope.counter = 0;
-  
+
       scope.$watch(
-        function(scope) { return scope.number; },
+        function(scope) { return scope.test; },
         function(newValue, oldValue, scope) {
           scope.counter++;
         }
       );
-  
       scope.$digest();
       expect(scope.counter).toBe(1);
-  
+
       scope.$digest();
       expect(scope.counter).toBe(1);
     });
 
     it('catches exceptions in watch functions and continues', function() {
-      scope.aValue = 'abc';
+      // REDO
+      // it's a simple try-catch block. if it catches, just send the error to console
+      scope.testValue = 'san diego';
       scope.counter = 0;
 
       scope.$watch(
-        function(scope) { throw 'Error'; },
-        function(newValue, oldValue, scope) { }
+        function(scope) { throw Error; },
+        function(newValue, oldValue, scope) {}
       );
+
       scope.$watch(
-        function(scope) { return scope.aValue; },
+        function(scope) { return scope.value; },
         function(newValue, oldValue, scope) {
           scope.counter++;
         }
-      );
+      )
 
       scope.$digest();
       expect(scope.counter).toBe(1);
     });
 
     it('catches exceptions in listener functions and continues', function() {
-      scope.aValue = 'abc';
+      // REDO
+      scope.testValue = 'carmen';
       scope.counter = 0;
 
       scope.$watch(
-        function(scope) { return scope.aValue; },
-        function(newValue, oldValue, scope) { 
-          throw 'Error';
-        }
+        function(scope) { return scope.testValue; },
+        function(newValue, oldValue, scope) { throw Error; }
       );
+
       scope.$watch(
-        function(scope) { return scope.aValue; },
+        function(scope) { return scope.testValue; },
         function(newValue, oldValue, scope) {
           scope.counter++;
         }
-      );
+      )
 
       scope.$digest();
       expect(scope.counter).toBe(1);
     });
 
     it('allows destroying a $watch with a removal function', function() {
-      // calling $watch returns a function, when invoked, destroys the watcher
-      // that's pretty freakin' slick
-      scope.aValue = 'abc';
+      // REDO
+      // $watch now returns a function to destroy watcher that was created
+      scope.testValue = 'tofu';
       scope.counter = 0;
 
       var destroyWatch = scope.$watch(
-        function(scope) { return scope.aValue; },
+        function(scope) { return scope.testValue; },
         function(newValue, oldValue, scope) {
           scope.counter++;
         }
@@ -297,11 +302,11 @@ describe('Scope', function() {
       scope.$digest();
       expect(scope.counter).toBe(1);
 
-      scope.aValue = 'def';
+      scope.testValue = 'tempeh';
       scope.$digest();
       expect(scope.counter).toBe(2);
 
-      scope.aValue = 'ghi';
+      scope.testValue = 'multigrain';
       destroyWatch();
       scope.$digest();
       expect(scope.counter).toBe(2);

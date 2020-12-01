@@ -1,7 +1,7 @@
-# Scope Objects
-
-Scope is the glue between the view (our HTML) and the controller (our JavaScript code)
-
+# Scope
+## What is it?
+Scope is the glue between the view (our HTML) and the controller (our JavaScript code). When changes are detected in the view (HTML), we want to run a corresponding listener function. This is also known as dirty-checking. 
+## What's it used for?
 Scopes are used for four things in AngularJS
 1. Sharing data between a controller/directive and its view template
 2. Sharing data between different parts of the UI

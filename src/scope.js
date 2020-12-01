@@ -5,31 +5,32 @@ var _ = require('lodash');
 function Scope() {
   this.$$watchers = [];
   this.$$lastDirtyWatch = null;
-};
+}
+// used to initialize scope.last in case the first watcher
+// is actually undefined. This works because is only ever 
+// equal to itself.
+function initLastProp() {};
 
-function initListenerFn() {};
-
-Scope.prototype.$watch = function(watchFn, listenerFn, valueEq) {
+Scope.prototype.$watch = function(watchFn, listenerFn, eqValue) {
   var self = this;
   var watcher = {
     watchFn: watchFn,
-    listenerFn: listenerFn || function() {},
-    last: initListenerFn,
-    valueEq: !!valueEq
-  }
-  this.$$watchers.unshift(watcher);
+    listenerFn: listenerFn || function() {}, 
+    last: initLastProp,
+    eqValue: !!eqValue
+  };
   this.$$lastDirtyWatch = null;
+  this.$$watchers.unshift(watcher);
   return function() {
-    var index = self.$$watchers.indexOf(watcher);
-    if (index >= 0) {
-      self.$$watchers.splice(index, 1);
+    var watcherIndex = self.$$watchers.indexOf(watcher);
+    if (watcherIndex >= 0) {
+      self.$$watchers.splice(watcherIndex, 1);
       self.$$lastDirtyWatch = null;
     }
-  };
+  }
 };
 
 Scope.prototype.$$digestOnce = function() {
-  // digest has to keep on running until no changes are detected
   var self = this;
   var newValue, oldValue, dirty;
   _.forEachRight(this.$$watchers, function(watcher) {
@@ -37,12 +38,12 @@ Scope.prototype.$$digestOnce = function() {
       if (watcher) {
         newValue = watcher.watchFn(self);
         oldValue = watcher.last;
-        if (!self.$$areEqual(newValue, oldValue, watcher.valueEq)) {
+        if (!self.$$isEqual(newValue, oldValue, watcher.eqValue)) {
           self.$$lastDirtyWatch = watcher;
-          watcher.last = (watcher.valueEq ? _.cloneDeep(newValue) : newValue);
-          watcher.listenerFn(newValue, (oldValue === initListenerFn ? newValue : oldValue), self);
+          watcher.last = (watcher.eqValue ? _.cloneDeep(newValue) : newValue);
+          watcher.listenerFn(newValue, (oldValue === initLastProp ? newValue : oldValue), self);
           dirty = true;
-        } else if (self.$$lastDirtyWatch === watcher) {
+        } else if (watcher === self.$$lastDirtyWatch) {
           return false;
         }
       }
@@ -51,27 +52,30 @@ Scope.prototype.$$digestOnce = function() {
     }
   });
   return dirty;
-}
+};
 
 Scope.prototype.$digest = function() {
-  // digest has to keep on running until no changes are detected
-  var ttl = 10;
   var dirty;
+  var ttl = 10;
   this.$$lastDirtyWatch = null;
   do {
     dirty = this.$$digestOnce();
-    if (dirty && !(ttl--)) {
-      throw '10 digest iterations reached';
+    if(dirty && !(ttl--)) {
+      throw '10 $digest iterations reached';
     }
   } while(dirty)
-}
+};
 
-Scope.prototype.$$areEqual = function(newValue, oldValue, valueEq) {
-  if (valueEq) {
+Scope.prototype.$$isEqual = function(newValue, oldValue, eqValue) {
+  if (eqValue) {
     return _.isEqual(newValue, oldValue);
   } else {
-    return newValue === oldValue || 
-      (typeof newValue === 'number' && typeof oldValue === 'number' && isNaN(newValue) && isNaN(oldValue));
+    return newValue === oldValue || (
+      typeof newValue === 'number' &&
+      typeof oldValue === 'number' && 
+      isNaN(newValue) && 
+      isNaN(oldValue)
+    );
   }
-};
+}
 module.exports = Scope;
