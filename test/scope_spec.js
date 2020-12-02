@@ -313,6 +313,8 @@ describe('Scope', function() {
     });
 
     it('allows destroying a $watch during digest', function() {
+      // REDO 
+      // edge case 
       scope.aValue = 'abc';
 
       var watchCalls = [];
@@ -393,6 +395,34 @@ describe('Scope', function() {
 
       scope.$digest();
       expect(scope.counter).toBe(0);
+    });
+  });
+
+  describe('eval', function() {
+    var scope;
+
+    beforeEach(function() {
+      scope = new Scope();
+    });
+
+    it('executes $evaled function and returns result', function() {
+      scope.aValue = 42;
+
+      var result = scope.$eval(function(scope) {
+        return scope.aValue;
+      });
+
+      expect(result).toBe(42);
+    });
+
+    it('passes the second $eval argument straight through', function() {
+      scope.aValue = 42;
+
+      var result = scope.$eval(function(scope, arg) {
+        return scope.aValue + arg;
+      }, 2);
+
+      expect(result).toBe(44);
     });
   });
 });
