@@ -6,6 +6,7 @@ function Scope() {
   this.$$watchers = [];
   this.$$lastDirtyWatch = null;
   this.$$asyncQueue = [];
+  this.$$phase = null;
 }
 // used to initialize scope.last in case the first watcher
 // is actually undefined. This works because is only ever 
@@ -59,6 +60,7 @@ Scope.prototype.$digest = function() {
   var dirty;
   var ttl = 10;
   this.$$lastDirtyWatch = null;
+  this.$beginPhase('$digest');
   do {
     while (this.$$asyncQueue.length) {
       var asyncTask = this.$$asyncQueue.shift();
@@ -66,9 +68,11 @@ Scope.prototype.$digest = function() {
     }
     dirty = this.$$digestOnce();
     if((dirty || this.$$asyncQueue.length) && !(ttl--)) {
+      this.$clearPhase();
       throw '10 $digest iterations reached';
     }
   } while(dirty || this.$$asyncQueue.length)
+  this.$clearPhase();
 };
 
 Scope.prototype.$$isEqual = function(newValue, oldValue, eqValue) {
@@ -94,9 +98,23 @@ Scope.prototype.$evalAsync = function(expr) {
 
 Scope.prototype.$apply = function(expr) {
   try {
+    this.$beginPhase('$apply');
     return this.$eval(expr);
   } finally {
+    this.$clearPhase();
     this.$digest();
   }
 };
+
+Scope.prototype.$beginPhase = function(phase) {
+  if (this.$$phase) {
+    throw this.$$phase + ' already in progress.';
+  }
+  this.$$phase = phase;
+};
+
+Scope.prototype.$clearPhase = function() {
+  this.$$phase = null;
+}
+
 module.exports = Scope;
