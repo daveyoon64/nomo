@@ -6,6 +6,7 @@ function Scope() {
   this.$$watchers = [];
   this.$$lastDirtyWatch = null;
   this.$$asyncQueue = [];
+  this.$$applyAsyncQueue = [];
   this.$$phase = null;
 }
 // used to initialize scope.last in case the first watcher
@@ -93,7 +94,15 @@ Scope.prototype.$eval = function(expr, locals) {
 };
 
 Scope.prototype.$evalAsync = function(expr) {
-  this.$$asyncQueue.push({scope: this, expression: expr});
+  var self = this;
+  if(!self.$$phase && !self.$$asyncQueue.length) {
+    setTimeout(function() {
+      if(self.$$asyncQueue.length) {
+        self.$digest();
+      }
+    }, 0);
+  }
+  self.$$asyncQueue.push({scope: self, expression: expr});
 };
 
 Scope.prototype.$apply = function(expr) {
@@ -115,6 +124,20 @@ Scope.prototype.$beginPhase = function(phase) {
 
 Scope.prototype.$clearPhase = function() {
   this.$$phase = null;
+}
+
+Scope.prototype.$applyAsync = function(expr) {
+  var self = this;
+  self.$$applyAsyncQueue.push(function() {
+    self.$eval(expr);
+  });
+  setTimeout(function() {
+    self.$apply(function() {
+      while (self.$$applyAsyncQueue.length) {
+        self.$$applyAsyncQueue.shift()();
+      }
+    });
+  }, 0);
 }
 
 module.exports = Scope;
