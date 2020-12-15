@@ -671,6 +671,8 @@ describe('Scope', function() {
 
     it('cancels and flush $applyAsync if digested first', function(done) {
       // but if we call $digest, it should happen immediately!
+      // It seems to be important that the $$applyAsyncQueue be clear
+      // need to REDO
       scope.counter = 0;
 
       scope.$watch(
@@ -698,4 +700,27 @@ describe('Scope', function() {
       }, 50);
     });
   });
+
+  describe('$postDigest', function() {
+    var scope;
+
+    beforeEach(function() {
+      scope = new Scope();
+    });
+
+    it('runs after each digest', function() {
+      scope.counter = 0;
+      scope.$$postDigest(function() {
+        scope.counter++;
+      });
+
+      expect(scope.counter).toBe(0);
+      scope.$digest();
+
+      expect(scope.counter).toBe(1);
+      scope.$digest();
+
+      expect(scope.counter).toBe(1);
+    })
+  })
 });

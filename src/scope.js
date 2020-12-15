@@ -8,6 +8,7 @@ function Scope() {
   this.$$asyncQueue = [];
   this.$$applyAsyncQueue = [];
   this.$$applyAsyncId = null;
+  this.$$postDigestQueue = [];
   this.$$phase = null;
 }
 // used to initialize scope.last in case the first watcher
@@ -81,6 +82,10 @@ Scope.prototype.$digest = function() {
     }
   } while(dirty || this.$$asyncQueue.length)
   this.$clearPhase();
+
+  while (this.$$postDigestQueue.length) {
+    this.$$postDigestQueue.shift()();
+  }
 };
 
 Scope.prototype.$$isEqual = function(newValue, oldValue, eqValue) {
@@ -150,6 +155,10 @@ Scope.prototype.$applyAsync = function(expr) {
       self.$apply(_.bind(self.$$flushApplyAsync, self));
     }, 0);
   }
+};
+
+Scope.prototype.$$postDigest = function(fn) {
+  this.$$postDigestQueue.push(fn);
 };
 
 module.exports = Scope;
