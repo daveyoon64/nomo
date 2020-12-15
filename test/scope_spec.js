@@ -565,6 +565,8 @@ describe('Scope', function() {
     });
 
     it('schedules a digest in $evalAsync', function(done) {
+      // checks $$asyncQueue and runs $digest() if there are any queued async jobs
+      // then $evalAsync will schedule a new job
       scope.aValue = 'abc';
       scope.counter = 0;
 
@@ -577,7 +579,9 @@ describe('Scope', function() {
 
       scope.$evalAsync(function(scope) { });
 
+      // nothing should run just yet
       expect(scope.counter).toBe(0);
+      // but after a short delay, $digest should run and pick it up
       setTimeout(function() {
         expect(scope.counter).toBe(1);
         done();
@@ -617,6 +621,7 @@ describe('Scope', function() {
     });
 
     it('never executes $applyAsynced function in the same cycle', function(done) {
+      // $applyAsync will always defer the invocation
       scope.aValue = [1, 2, 3];
       scope.asyncApplied = false;
 
@@ -630,9 +635,65 @@ describe('Scope', function() {
       );
 
       scope.$digest();
+      // though the listener should run because of the dirty watcher
+      // scope.asyncApplied should be false because the listener was
+      // deferred. After a small time-out, 
       expect(scope.asyncApplied).toBe(false);
       setTimeout(function() {
         expect(scope.asyncApplied).toBe(true);
+        done();
+      }, 50);
+    });
+
+    it('coalesces many calls to $applyAsync', function(done) {
+      scope.counter = 0;
+
+      scope.$watch(
+        function(scope) {
+          scope.counter++;
+          return scope.aValue;
+        },
+        function(newValue, oldValue, scope) { }
+      );
+
+      scope.$applyAsync(function(scope) {
+        scope.aValue = 'abc';
+      });
+      scope.$applyAsync(function(scope) {
+        scope.aValue = 'def';
+      });
+
+      setTimeout(function() {
+        expect(scope.counter).toBe(2);
+        done();
+      }, 50);
+    });
+
+    it('cancels and flush $applyAsync if digested first', function(done) {
+      // but if we call $digest, it should happen immediately!
+      scope.counter = 0;
+
+      scope.$watch(
+        function(scope) {
+          scope.counter++;
+          return scope.aValue;
+        },
+        function(newValue, oldValue, scope) { }
+      );
+
+      scope.$applyAsync(function(scope) {
+        scope.aValue = 'abc';
+      });
+      scope.$applyAsync(function(scope) {
+        scope.aValue = 'def';
+      });
+
+      scope.$digest();
+      expect(scope.counter).toBe(2);
+      expect(scope.aValue).toEqual('def');
+
+      setTimeout(function() {
+        expect(scope.counter).toBe(2);
         done();
       }, 50);
     });
