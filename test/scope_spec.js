@@ -752,7 +752,7 @@ describe('Scope', function() {
       scope.$$postDigest(function() {
         scope.counter++;
       });
-      
+
       expect(scope.counter).toBe(0);
       scope.$digest();
       expect(scope.counter).toBe(1);
@@ -773,5 +773,49 @@ describe('Scope', function() {
       scope.$digest();
       expect(didRun).toBe(true);
     });
+  });
+
+  describe('$watchGroup', function() {
+
+    var scope;
+    beforeEach(function() {
+      scope = new Scope();
+    });
+
+    it('takes watches as an array and calls listeners with arrays', function() {
+      var gotNewValues, gotOldValues;
+
+      scope.aValue = 1;
+      scope.anotherValue = 2;
+
+      scope.$watchGroup([
+        function(scope) { return scope.aValue; },
+        function(scope) { return scope.anotherValue; }
+      ], function(newValues, oldValues, scope) {
+        gotNewValues = newValues;
+        gotOldValues = oldValues;
+      });
+      scope.$digest();
+
+      expect(gotNewValues).toEqual([1, 2]);
+      expect(gotOldValues).toEqual([1, 2]);
+    });
+
+    it('only calls listener once per digest', function() {
+      var counter = 0;
+
+      scope.aValue = 1;
+      scope.anotherValue = 2;
+
+      scope.$watchGroup([
+        function(scope) { return scope.aValue; },
+        function(scope) { return scope.anotherValue; }
+      ], function(newValue, oldValues, scope) {
+        counter++;
+      });
+      scope.$digest();
+
+      expect(counter).toEqual(1);
+    })
   });
 });
