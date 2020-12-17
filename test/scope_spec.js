@@ -880,10 +880,10 @@ describe('Scope', function() {
         counter++;
       });
       scope.$digest();
-        scope.anotherValue = 3;
-        destroyGroup();
-        scope.$digest();
-        expect(counter).toEqual(1);
+      scope.anotherValue = 3;
+      destroyGroup();
+      scope.$digest();
+      expect(counter).toEqual(1);
     });
 
     it('does not call the zero-watch listener when deregistered first', function() {
