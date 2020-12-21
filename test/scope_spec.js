@@ -987,7 +987,7 @@ describe('Scope', function() {
       expect(parent.name).toBe('Joe');
     });
 
-    it('does not shadow memebers of parent scopes attributes', function() {
+    it('does not shadow members of parent scopes attributes', function() {
       var parent = new Scope();
       var child = parent.$new();
 
@@ -996,6 +996,21 @@ describe('Scope', function() {
 
       expect(child.user.name).toBe('Jill');
       expect(parent.user.name).toBe('Jill');
+    });
+
+    it('does not digest its parent(s)', function() {
+      var parent = new Scope();
+      var child = parent.$new();
+
+      parent.aValue = 'xyz';
+      parent.$watch(
+        function(scope) { return scope.aValue; },
+        function(newValue, oldValue, scope) {
+          scope.aValueWas = newValue;
+        }
+      );
+      child.$digest();
+      expect(child.aValueWas).toBeUndefined();
     });
   });
 });
