@@ -9,7 +9,7 @@ function Scope() {
   this.$$applyAsyncQueue = [];
   this.$$applyAsyncId = null;
   this.$$postDigestQueue = [];
-  this.$$root = this;
+  this.$root = this;
   this.$$children = [];
   this.$$phase = null;
 }
@@ -26,13 +26,13 @@ Scope.prototype.$watch = function(watchFn, listenerFn, eqValue) {
     last: initLastProp,
     eqValue: !!eqValue
   };
-  this.$$lastDirtyWatch = null;
   this.$$watchers.unshift(watcher);
+  this.$root.$$lastDirtyWatch = null;
   return function() {
     var watcherIndex = self.$$watchers.indexOf(watcher);
     if (watcherIndex >= 0) {
       self.$$watchers.splice(watcherIndex, 1);
-      self.$$lastDirtyWatch = null;
+      self.$root.$$lastDirtyWatch = null;
     }
   }
 };
@@ -97,13 +97,13 @@ Scope.prototype.$$digestOnce = function() {
           newValue = watcher.watchFn(scope);
           oldValue = watcher.last;
           if (!self.$$areEqual(newValue, oldValue, watcher.eqValue)) {
-            self.$$lastDirtyWatch = watcher;
+            self.$root.$$lastDirtyWatch = watcher;
             watcher.last = (watcher.eqValue ? _.cloneDeep(newValue) : newValue);
             watcher.listenerFn(newValue, 
               (oldValue === initLastProp ? newValue : oldValue), 
               scope);
             dirty = true;
-          } else if (self.$$lastDirtyWatch === watcher) {
+          } else if (self.$root.$$lastDirtyWatch === watcher) {
             continueLoop = false;
             return false;
           }
@@ -120,7 +120,7 @@ Scope.prototype.$$digestOnce = function() {
 Scope.prototype.$digest = function() {
   var dirty;
   var ttl = 10;
-  this.$$lastDirtyWatch = null;
+  this.$root.$$lastDirtyWatch = null;
   this.$beginPhase('$digest');
 
   if (this.$$applyAsyncId) {
@@ -176,7 +176,7 @@ Scope.prototype.$evalAsync = function(expr) {
   if(!self.$$phase && !self.$$asyncQueue.length) {
     setTimeout(function() {
       if(self.$$asyncQueue.length) {
-        self.$$root.$digest();
+        self.$root.$digest();
       }
     }, 0);
   }
@@ -189,7 +189,7 @@ Scope.prototype.$apply = function(expr) {
     return this.$eval(expr);
   } finally {
     this.$clearPhase();
-    this.$$root.$digest();
+    this.$root.$digest();
   }
 };
 
