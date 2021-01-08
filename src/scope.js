@@ -57,6 +57,8 @@ Scope.prototype.$watchGroup = function(watchFns, listenerFn) {
   }
 
   function watchGroupListener() {
+    // when listener run for the first time, it should return the same array
+    // so '===' works if only run once
     if (firstRun) {
       firstRun = false;
       listenerFn(newValues, newValues, self);
@@ -231,10 +233,15 @@ Scope.prototype.$$postDigest = function(fn) {
   this.$$postDigestQueue.push(fn);
 };
 
-Scope.prototype.$new = function() {
-  var ChildScope = function() { };
-  ChildScope.prototype = this;
-  var child = new ChildScope();
+Scope.prototype.$new = function(isolated) {
+  var child;
+  if (isolated) {
+    child = new Scope();
+  } else {
+    var ChildScope = function() { };
+    ChildScope.prototype = this;
+    child = new ChildScope();
+  }
   this.$$children.push(child);
   child.$$watchers = [];
   child.$$children = [];
