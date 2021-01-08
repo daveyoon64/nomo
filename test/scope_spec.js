@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 var Scope = require('../src/scope');
 var _ = require('lodash');
@@ -47,7 +47,7 @@ describe('Scope', function() {
       scope.$watch(
         function(scope) { return scope.test; },
         function() { scope.counter++; }
-      )
+      );
 
       expect(scope.counter).toBe(0);
       scope.$digest();
@@ -79,7 +79,7 @@ describe('Scope', function() {
       var watchFn = function(scope) { return scope.test; };
       var listenerFn = function(newValue, oldValue, scope) {
         testReturn = oldValue;
-      }
+      };
       scope.$watch(watchFn, listenerFn);
       scope.$digest();
       expect(testReturn).toBe(scope.test);
@@ -259,7 +259,7 @@ describe('Scope', function() {
         function(newValue, oldValue, scope) {
           scope.counter++;
         }
-      )
+      );
 
       scope.$digest();
       expect(scope.counter).toBe(1);
@@ -280,7 +280,7 @@ describe('Scope', function() {
         function(newValue, oldValue, scope) {
           scope.counter++;
         }
-      )
+      );
 
       scope.$digest();
       expect(scope.counter).toBe(1);
@@ -453,7 +453,7 @@ describe('Scope', function() {
         scope.aValue = 'RICHTER!';
       });
       expect(scope.counter).toBe(2);
-    })
+    });
   });
 
   describe('$evalAsync', function() {
@@ -1121,9 +1121,49 @@ describe('Scope', function() {
           scope.aValueWas = newValue;
         }
       );
-      
+
       parent.$digest();
       expect(child.aValueWas).toBe('abc');
+    });
+
+    it('digests from root on $apply when isolated', function() {
+      var parent = new Scope();
+      var child = parent.$new(true);
+      var child2 = child.$new();
+    
+      parent.aValue = 'abc';
+      parent.counter = 0;
+      parent.$watch(
+        function(scope) { return scope.aValue; },
+        function(newValue, oldValue, scope) {
+          scope.counter++;
+        }
+      );
+
+      child2.$apply(function(scope) { });
+      expect(parent.counter).toBe(1);
+    });
+
+    it('schedules a digest from root on $evalAsync when isolated', function(done) {
+      var parent = new Scope();
+      var child = parent.$new(true);
+      var child2 = child.$new();
+    
+      parent.aValue = 'abc';
+      parent.counter = 0;
+      parent.$watch(
+        function(scope) { return scope.aValue; },
+        function(newValue, oldValue, scope) {
+          scope.counter++;
+        }
+      );
+
+      child2.$evalAsync(function(scope) { });
+
+      setTimeout(function() {
+        expect(parent.counter).toBe(1);
+        done();
+      }, 50);
     });
   });
 });

@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 var _ = require('lodash');
 
@@ -16,7 +16,7 @@ function Scope() {
 // used to initialize scope.last in case the first watcher
 // is actually undefined. This works because is only ever 
 // equal to itself.
-function initLastProp() {};
+function initLastProp() {}
 
 Scope.prototype.$watch = function(watchFn, listenerFn, eqValue) {
   var self = this;
@@ -34,7 +34,7 @@ Scope.prototype.$watch = function(watchFn, listenerFn, eqValue) {
       self.$$watchers.splice(watcherIndex, 1);
       self.$root.$$lastDirtyWatch = null;
     }
-  }
+  };
 };
 
 Scope.prototype.$watchGroup = function(watchFns, listenerFn) {
@@ -144,7 +144,7 @@ Scope.prototype.$digest = function() {
       this.$clearPhase();
       throw '10 $digest iterations reached';
     }
-  } while(dirty || this.$$asyncQueue.length)
+  } while(dirty || this.$$asyncQueue.length);
   this.$clearPhase();
 
   while (this.$$postDigestQueue.length) {
@@ -167,7 +167,7 @@ Scope.prototype.$$areEqual = function(newValue, oldValue, eqValue) {
       isNaN(oldValue)
     );
   }
-}
+};
 
 Scope.prototype.$eval = function(expr, locals) {
   return expr(this, locals);
@@ -215,7 +215,7 @@ Scope.prototype.$$flushApplyAsync= function() {
     }
   }
   this.$$applyAsyncId = null;
-}
+};
 
 Scope.prototype.$applyAsync = function(expr) {
   var self = this;
@@ -237,6 +237,7 @@ Scope.prototype.$new = function(isolated) {
   var child;
   if (isolated) {
     child = new Scope();
+    child.$root = this.$root;
   } else {
     var ChildScope = function() { };
     ChildScope.prototype = this;
@@ -256,5 +257,5 @@ Scope.prototype.$$everyScope = function(fn) {
   } else {
     return false;
   }
-}
+};
 module.exports = Scope;
