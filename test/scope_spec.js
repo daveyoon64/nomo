@@ -1249,4 +1249,12 @@ describe('Scope', function() {
       parent.$digest();
     });
   });
+
+  describe('$watchCollection', function() {
+    var scope;
+
+    beforeEach(function() {
+      scope = new Scope();
+    });
+  });
 });
