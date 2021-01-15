@@ -18,6 +18,13 @@ function Scope() {
 // equal to itself.
 function initLastProp() {}
 
+function isArrayLike(obj) {
+  if (_.isNull(obj) || _.isUndefined(obj)) {
+    return false;
+  }
+  var length = obj.length;
+  return _.isNumber(length);
+}
 Scope.prototype.$watch = function(watchFn, listenerFn, eqValue) {
   var self = this;
   var watcher = {
@@ -285,7 +292,7 @@ Scope.prototype.$watchCollection = function(watchFn, listenerFn) {
     newValue = watchFn(scope);
 
     if(_.isObject(newValue)) {
-      if(_.isArray(newValue)) {
+      if(_.isArrayLike(newValue)) {
         if(!_.isArray(oldValue)) {
           changeCount++;
           oldValue = [];
@@ -319,4 +326,5 @@ Scope.prototype.$watchCollection = function(watchFn, listenerFn) {
 
   return this.$watch(internalWatchFn, internalListenerFn);
 };
+
 module.exports = Scope;
