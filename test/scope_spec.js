@@ -1496,7 +1496,7 @@ describe('Scope', function() {
       scope.$watchCollection(
         function(scope) { return scope.obj; },
         function(newValue, oldValue, scope) {
-          scope.counter++
+          scope.counter++;
         }
       );
 
