@@ -11,8 +11,13 @@ function Scope() {
   this.$$postDigestQueue = [];
   this.$root = this;
   this.$$children = [];
+  this.$$listeners = {};
   this.$$phase = null;
 }
+
+//
+// Helper Functions
+//
 // used to initialize scope.last in case the first watcher
 // is actually undefined. This works because is only ever 
 // equal to itself.
@@ -26,6 +31,57 @@ function isArrayLike(obj) {
   return length === 0 || 
     (_.isNumber(length) && length > 0 && (length - 1) in obj);
 }
+//
+// Helper Methods for Scope
+//
+Scope.prototype.$$areEqual = function(newValue, oldValue, eqValue) {
+  if (eqValue) {
+    return _.isEqual(newValue, oldValue);
+  } else {
+    return newValue === oldValue || (
+      typeof newValue === 'number' &&
+      typeof oldValue === 'number' && 
+      isNaN(newValue) && 
+      isNaN(oldValue)
+    );
+  }
+};
+
+Scope.prototype.$beginPhase = function(phase) {
+  if (this.$$phase) {
+    throw this.$$phase + ' already in progress.';
+  }
+  this.$$phase = phase;
+};
+
+Scope.prototype.$clearPhase = function() {
+  this.$$phase = null;
+};
+
+Scope.prototype.$$everyScope = function(fn) {
+  if (fn(this)) {
+    return this.$$children.every(function(child) {
+      return child.$$everyScope(fn);
+    });
+  } else {
+    return false;
+  }
+};
+
+Scope.prototype.$destroy = function() {
+  if (this.$parent) {
+    var siblings = this.$parent.$$children;
+    var indexOfThis = siblings.indexOf(this);
+    if (indexOfThis >= 0) {
+      siblings.splice(indexOfThis, 1);
+    }
+  }
+  this.$$watchers = null;
+};
+
+//
+// Scope methods
+//
 Scope.prototype.$watch = function(watchFn, listenerFn, eqValue) {
   var self = this;
   var watcher = {
@@ -164,18 +220,7 @@ Scope.prototype.$digest = function() {
   }
 };
 
-Scope.prototype.$$areEqual = function(newValue, oldValue, eqValue) {
-  if (eqValue) {
-    return _.isEqual(newValue, oldValue);
-  } else {
-    return newValue === oldValue || (
-      typeof newValue === 'number' &&
-      typeof oldValue === 'number' && 
-      isNaN(newValue) && 
-      isNaN(oldValue)
-    );
-  }
-};
+
 
 Scope.prototype.$eval = function(expr, locals) {
   return expr(this, locals);
@@ -201,17 +246,6 @@ Scope.prototype.$apply = function(expr) {
     this.$clearPhase();
     this.$root.$digest();
   }
-};
-
-Scope.prototype.$beginPhase = function(phase) {
-  if (this.$$phase) {
-    throw this.$$phase + ' already in progress.';
-  }
-  this.$$phase = phase;
-};
-
-Scope.prototype.$clearPhase = function() {
-  this.$$phase = null;
 };
 
 Scope.prototype.$$flushApplyAsync= function() {
@@ -257,30 +291,10 @@ Scope.prototype.$new = function(isolated, parent) {
   }
   parent.$$children.push(child);
   child.$$watchers = [];
+  child.$$listeners = {};
   child.$$children = [];
   child.$parent = parent;
   return child;
-};
-
-Scope.prototype.$$everyScope = function(fn) {
-  if (fn(this)) {
-    return this.$$children.every(function(child) {
-      return child.$$everyScope(fn);
-    });
-  } else {
-    return false;
-  }
-};
-
-Scope.prototype.$destroy = function() {
-  if (this.$parent) {
-    var siblings = this.$parent.$$children;
-    var indexOfThis = siblings.indexOf(this);
-    if (indexOfThis >= 0) {
-      siblings.splice(indexOfThis, 1);
-    }
-  }
-  this.$$watchers = null;
 };
 
 Scope.prototype.$watchCollection = function(watchFn, listenerFn) {
@@ -368,6 +382,15 @@ Scope.prototype.$watchCollection = function(watchFn, listenerFn) {
   };
 
   return this.$watch(internalWatchFn, internalListenerFn);
+};
+
+// 
+Scope.prototype.$on = function(eventName, listener) {
+  var listeners = this.$$listeners[eventName];
+  if (!listeners) {
+    this.$$listeners[eventName] = listeners = [];
+  }
+  listeners.push(listener);
 };
 
 module.exports = Scope;
