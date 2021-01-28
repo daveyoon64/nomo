@@ -384,13 +384,26 @@ Scope.prototype.$watchCollection = function(watchFn, listenerFn) {
   return this.$watch(internalWatchFn, internalListenerFn);
 };
 
-// 
 Scope.prototype.$on = function(eventName, listener) {
   var listeners = this.$$listeners[eventName];
   if (!listeners) {
     this.$$listeners[eventName] = listeners = [];
   }
   listeners.push(listener);
+};
+
+Scope.prototype.$emit = function(eventName) {
+  var listeners = this.$$listeners[eventName] || [];
+  _.forEach(listeners, function(listener) {
+    listener();
+  });
+};
+
+Scope.prototype.$broadcast = function(eventName) {
+  var listeners = this.$$listeners[eventName] || [];
+  _.forEach(listeners, function(listener) {
+    listener();
+  });
 };
 
 module.exports = Scope;
